@@ -15,7 +15,8 @@ import {
 } from "@/db/schema";
 import { authenticateRequest } from "@/lib/auth";
 import { eq, and, desc } from "drizzle-orm";
-import { generateEmbedding, streamCompletion } from "@/lib/gemini";
+import { streamCompletion } from "@/lib/llm";
+import { generateLocalEmbedding } from "@/lib/local-ai";
 import { decrypt } from "@/lib/crypto";
 import { searchSimilar } from "@/lib/vector-search";
 
@@ -43,11 +44,21 @@ export async function POST(
     }
 
     const { id: repoId } = await params;
-    const { question, sessionId } = await request.json();
+    if (!repoId) {
+      return NextResponse.json({ error: "Repository ID is required" }, { status: 400 });
+    }
 
-    if (!question) {
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { question, sessionId } = body;
+    if (!question || typeof question !== "string") {
       return NextResponse.json(
-        { error: "Question is required" },
+        { error: "Question is required and must be a string" },
         { status: 400 }
       );
     }
@@ -116,7 +127,7 @@ export async function POST(
     }
 
     // Retrieve relevant code context
-    const queryEmbedding = await generateEmbedding(question, apiKey);
+    const queryEmbedding = await generateLocalEmbedding(question);
     const searchResults = await searchSimilar(repoId, queryEmbedding, 8, 0.4, question);
 
     // Build code context
@@ -144,7 +155,7 @@ export async function POST(
       conversationContext =
         "Previous conversation:\n" +
         history
-          .map((m) => `${m.role === "user" ? "Q" : "A"}: ${m.content.slice(0, 200)}`)
+          .map((m: { role: string; content: string }) => `${m.role === "user" ? "Q" : "A"}: ${m.content.slice(0, 200)}`)
           .join("\n") +
         "\n\n";
     }

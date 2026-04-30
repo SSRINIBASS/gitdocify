@@ -14,6 +14,7 @@ const TAG_LENGTH = 16;
 function getEncryptionKey(): Buffer {
   const secret = process.env.ENCRYPTION_SECRET;
   if (!secret || secret.length < 32) {
+    console.error(`[Crypto] Secret missing or too short: ${secret?.length || 0} chars`);
     throw new Error("ENCRYPTION_SECRET must be at least 32 characters");
   }
   // Derive a 32-byte key from the secret

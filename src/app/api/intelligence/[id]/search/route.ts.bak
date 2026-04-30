@@ -1,0 +1,3 @@
+/**
+ * GET /api/intelligence/[id]/search — Semantic code search via pgvector.
+ */

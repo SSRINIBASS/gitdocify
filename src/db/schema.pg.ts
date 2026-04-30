@@ -15,6 +15,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -28,6 +29,52 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/* ─────────────────────── Organizations ──────────────────────── */
+
+export const organizations = pgTable("organizations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_organizations_name").on(table.name),
+]);
+
+/* ─────────────────────────── Teams ─────────────────────────── */
+
+export const teams = pgTable("teams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_teams_org_id").on(table.organizationId),
+  index("idx_teams_name").on(table.name),
+]);
+
+/* ─────────────────────── Team Memberships ──────────────────────── */
+
+export const teamMemberships = pgTable("team_memberships", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  teamId: uuid("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 64 }).notNull().default("member"), // 'owner', 'admin', 'member'
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("idx_team_memberships_user_id").on(table.userId),
+  index("idx_team_memberships_team_id").on(table.teamId),
+  uniqueIndex("idx_team_memberships_user_team").on(table.userId, table.teamId),
+]);
+
 /* ─────────────────────── Repositories ──────────────────────── */
 
 export const repositories = pgTable(
@@ -37,6 +84,8 @@ export const repositories = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .references(() => teams.id, { onDelete: "cascade" }),
     repoUrl: varchar("repo_url", { length: 512 }).notNull(),
     name: varchar("name", { length: 256 }).notNull(),
     owner: varchar("owner", { length: 256 }).notNull(),
@@ -49,11 +98,13 @@ export const repositories = pgTable(
     errorMessage: text("error_message"),
     readmeContent: text("readme_content"),
     architectureContent: text("architecture_content"),
+    codeAnalysisJson: text("code_analysis_json"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("idx_repos_user_id").on(table.userId),
+    index("idx_repos_team_id").on(table.teamId),
     index("idx_repos_status").on(table.status),
     uniqueIndex("idx_repos_user_url").on(table.userId, table.repoUrl),
   ]
@@ -146,6 +197,12 @@ export const tutorMessages = pgTable(
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+export type Team = typeof teams.$inferSelect;
+export type NewTeam = typeof teams.$inferInsert;
+export type TeamMembership = typeof teamMemberships.$inferSelect;
+export type NewTeamMembership = typeof teamMemberships.$inferInsert;
 export type Repository = typeof repositories.$inferSelect;
 export type NewRepository = typeof repositories.$inferInsert;
 export type CodeChunk = typeof codeChunks.$inferSelect;

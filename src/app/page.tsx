@@ -55,6 +55,20 @@ function Navbar({
       <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
         <button
           className="btn-secondary"
+          onClick={() => router.push("/monitoring")}
+          style={{ padding: "6px 16px", fontSize: "13px" }}
+        >
+          📊 Monitoring
+        </button>
+        <button
+          className="btn-secondary"
+          onClick={() => router.push("/teams")}
+          style={{ padding: "6px 16px", fontSize: "13px" }}
+        >
+          👥 Teams
+        </button>
+        <button
+          className="btn-secondary"
           onClick={() => router.push("/settings")}
           style={{ padding: "6px 16px", fontSize: "13px" }}
         >
@@ -151,18 +165,21 @@ function RepoCard({ repo }: { repo: Repository }) {
 function AddRepoModal({
   onClose,
   onSubmit,
+  teams,
 }: {
   onClose: () => void;
-  onSubmit: (url: string) => void;
+  onSubmit: (url: string, teamId: string | undefined) => void;
+  teams: { id: string; name: string }[];
 }) {
   const [url, setUrl] = useState("");
+  const [teamId, setTeamId] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim()) return;
     setLoading(true);
-    await onSubmit(url.trim());
+    await onSubmit(url.trim(), teamId || undefined);
     setLoading(false);
   };
 
@@ -200,8 +217,26 @@ function AddRepoModal({
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             autoFocus
-            style={{ marginBottom: "20px" }}
+            style={{ marginBottom: "16px" }}
           />
+
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "block", fontSize: "13px", fontWeight: 500, marginBottom: "6px", color: "var(--text-secondary)" }}>
+              Assign to Team (Optional)
+            </label>
+            <select
+              className="input-field"
+              value={teamId}
+              onChange={(e) => setTeamId(e.target.value)}
+            >
+              <option value="">-- Personal Workspace --</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
@@ -364,6 +399,7 @@ export default function DashboardPage() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [repos, setRepos] = useState<Repository[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -379,8 +415,25 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (token) fetchRepos();
+    if (token) {
+      fetchRepos();
+      fetchTeams();
+    }
   }, [token]);
+
+  async function fetchTeams() {
+    try {
+      const res = await fetch("/api/teams", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTeams(data.teams || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch teams:", err);
+    }
+  }
 
   async function fetchRepos() {
     setLoading(true);
@@ -399,7 +452,7 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleIngest(url: string) {
+  async function handleIngest(url: string, teamId: string | undefined) {
     try {
       const res = await fetch("/api/repos", {
         method: "POST",
@@ -407,7 +460,7 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ repoUrl: url }),
+        body: JSON.stringify({ repoUrl: url, teamId }),
       });
 
       if (!res.ok) {
@@ -505,6 +558,7 @@ export default function DashboardPage() {
         <AddRepoModal
           onClose={() => setShowAddModal(false)}
           onSubmit={handleIngest}
+          teams={teams}
         />
       )}
     </>

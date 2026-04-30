@@ -13,10 +13,10 @@ import { RepoStatus, JobStatus } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getFilesSafely } from "@/lib/git";
 import { chunkRepository } from "@/lib/chunking";
-import { generateEmbeddingsBatch } from "@/lib/gemini";
+import { generateLocalEmbeddingsBatch } from "@/lib/local-ai";
 import { decrypt } from "@/lib/crypto";
 import { storeEmbeddings } from "@/lib/vector-search";
-import { enqueueDocsJob, type IndexJobData } from "@/lib/queue";
+import { enqueueDocsJob, enqueueCodeAnalysisJob, type IndexJobData } from "@/lib/queue";
 import { users } from "@/db/schema";
 import path from "path";
 
@@ -91,7 +91,7 @@ export async function processIndexJob(job: BullJob<IndexJobData>) {
     for (let i = 0; i < chunkRecords.length; i += 500) {
       const batch = chunkRecords.slice(i, i + 500);
       const inserted = await db.insert(codeChunks).values(batch).returning({ id: codeChunks.id });
-      insertedIds.push(...inserted.map((r) => r.id));
+      insertedIds.push(...inserted.map((r: { id: string }) => r.id));
     }
 
     await job.updateProgress(50);
@@ -103,7 +103,7 @@ export async function processIndexJob(job: BullJob<IndexJobData>) {
         `File: ${c.filePath}\nSymbol: ${c.symbolName || "N/A"}\nType: ${c.symbolType || "code"}\nLines: ${c.startLine}-${c.endLine}\n\n${c.content}`
     );
 
-    const embeddings = await generateEmbeddingsBatch(texts, apiKey, 10, 200);
+    const embeddings = await generateLocalEmbeddingsBatch(texts, 10);
 
     await job.updateProgress(80);
 
@@ -153,6 +153,24 @@ export async function processIndexJob(job: BullJob<IndexJobData>) {
     });
 
     console.log(`[index] Chained docs job ${docsJob.id}`);
+
+    // Chain: enqueue code analysis job
+    const [codeAnalysisJob] = await db
+      .insert(jobs)
+      .values({
+        repoId,
+        type: "CODE_ANALYSIS",
+        status: JobStatus.PENDING,
+      })
+      .returning();
+
+    await enqueueCodeAnalysisJob({
+      repoId,
+      jobId: codeAnalysisJob.id,
+      userId,
+    });
+
+    console.log(`[index] Chained code analysis job ${codeAnalysisJob.id}`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error(`[index] Failed: ${errorMsg}`);

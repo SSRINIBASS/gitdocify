@@ -6,7 +6,7 @@ config({ path: ".env.local" });
 const isPostgres = process.env.DB_TYPE === "postgres";
 
 export default defineConfig({
-  schema: isPostgres ? "./src/db/schema.ts" : "./src/db/schema.sqlite.ts",
+  schema: isPostgres ? "./src/db/schema.pg.ts" : "./src/db/schema.sqlite.ts",
   out: "./drizzle",
   dialect: isPostgres ? "postgresql" : "sqlite",
   dbCredentials: {

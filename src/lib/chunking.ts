@@ -7,7 +7,7 @@
 
 import path from "path";
 import { detectLanguage, readFileSafe } from "./git";
-import { estimateTokens } from "./gemini";
+import { estimateTokens } from "./llm";
 
 /* ─────────────── Types ─────────────── */
 

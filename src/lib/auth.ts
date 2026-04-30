@@ -6,6 +6,9 @@
 
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import bcrypt from "bcryptjs";
+import { db } from "@/db";
+import { eq } from "drizzle-orm";
+import { users } from "@/db/schema";
 
 const SALT_ROUNDS = 12;
 
@@ -93,4 +96,35 @@ export async function authenticateRequest(
   } catch {
     return null;
   }
+}
+
+/**
+ * Validate password strength
+ */
+export function validatePassword(password: string): { valid: boolean; message: string } {
+  if (!password || password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long" };
+  }
+
+  // Check for at least one uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one uppercase letter" };
+  }
+
+  // Check for at least one lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one lowercase letter" };
+  }
+
+  // Check for at least one number
+  if (!/\d/.test(password)) {
+    return { valid: false, message: "Password must contain at least one number" };
+  }
+
+  // Check for at least one special character
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one special character" };
+  }
+
+  return { valid: true, message: "Valid password" };
 }

@@ -15,129 +15,134 @@ import { cloneRepository, getFilesSafely, detectLanguage } from "@/lib/git";
 import { enqueueIndexJob, type IngestJobData } from "@/lib/queue";
 import path from "path";
 import fs from "fs/promises";
+import { logger } from "@/lib/monitoring";
+import { monitorWorkerJob } from "@/lib/workerMonitoring";
 
 export async function processIngestJob(job: BullJob<IngestJobData>) {
   const { repoId, jobId, repoUrl, userId } = job.data;
-  console.log(`[ingest] Starting job ${jobId} for repo ${repoId}`);
 
-  try {
-    // Mark job as running
-    await db
-      .update(jobs)
-      .set({ status: JobStatus.RUNNING, startedAt: new Date() })
-      .where(eq(jobs.id, jobId));
+  return monitorWorkerJob('ingest', jobId, async () => {
+    console.log(`[ingest] Starting job ${jobId} for repo ${repoId}`);
 
-    await job.updateProgress(10);
+    try {
+      // Mark job as running
+      await db
+        .update(jobs)
+        .set({ status: JobStatus.RUNNING, startedAt: new Date() })
+        .where(eq(jobs.id, jobId));
 
-    // Clone repository
-    console.log(`[ingest] Cloning ${repoUrl}...`);
-    const { clonePath, commitHash } = await cloneRepository(repoUrl, repoId);
+      await job.updateProgress(10);
 
-    // Update repo: CLONED
-    await db
-      .update(repositories)
-      .set({
-        status: RepoStatus.CLONED,
-        commitHash,
-        updatedAt: new Date(),
-      })
-      .where(eq(repositories.id, repoId));
+      // Clone repository
+      console.log(`[ingest] Cloning ${repoUrl}...`);
+      const { clonePath, commitHash } = await cloneRepository(repoUrl, repoId);
 
-    await job.updateProgress(40);
+      // Update repo: CLONED
+      await db
+        .update(repositories)
+        .set({
+          status: RepoStatus.CLONED,
+          commitHash,
+          updatedAt: new Date(),
+        })
+        .where(eq(repositories.id, repoId));
 
-    // Analyze structure
-    console.log(`[ingest] Analyzing structure...`);
-    const files = await getFilesSafely(clonePath);
-    const totalFiles = files.length;
+      await job.updateProgress(40);
 
-    // Calculate size and primary language
-    let totalSize = 0;
-    const langCounts: Record<string, number> = {};
+      // Analyze structure
+      console.log(`[ingest] Analyzing structure...`);
+      const files = await getFilesSafely(clonePath);
+      const totalFiles = files.length;
 
-    for (const file of files) {
-      try {
-        const stat = await fs.stat(file);
-        totalSize += stat.size;
-      } catch {
-        /* skip */
+      // Calculate size and primary language
+      let totalSize = 0;
+      const langCounts: Record<string, number> = {};
+
+      for (const file of files) {
+        try {
+          const stat = await fs.stat(file);
+          totalSize += stat.size;
+        } catch {
+          /* skip */
+        }
+
+        const lang = detectLanguage(file);
+        if (lang) {
+          langCounts[lang] = (langCounts[lang] || 0) + 1;
+        }
       }
 
-      const lang = detectLanguage(file);
-      if (lang) {
-        langCounts[lang] = (langCounts[lang] || 0) + 1;
-      }
-    }
+      const primaryLanguage =
+        Object.entries(langCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
 
-    const primaryLanguage =
-      Object.entries(langCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+      // Update repo: STRUCTURED
+      await db
+        .update(repositories)
+        .set({
+          status: RepoStatus.STRUCTURED,
+          totalFiles,
+          totalSizeBytes: totalSize,
+          primaryLanguage,
+          updatedAt: new Date(),
+        })
+        .where(eq(repositories.id, repoId));
 
-    // Update repo: STRUCTURED
-    await db
-      .update(repositories)
-      .set({
-        status: RepoStatus.STRUCTURED,
-        totalFiles,
-        totalSizeBytes: totalSize,
-        primaryLanguage,
-        updatedAt: new Date(),
-      })
-      .where(eq(repositories.id, repoId));
+      await job.updateProgress(100);
 
-    await job.updateProgress(100);
+      // Complete job
+      await db
+        .update(jobs)
+        .set({
+          status: JobStatus.COMPLETED,
+          progress: 100,
+          completedAt: new Date(),
+        })
+        .where(eq(jobs.id, jobId));
 
-    // Complete job
-    await db
-      .update(jobs)
-      .set({
-        status: JobStatus.COMPLETED,
-        progress: 100,
-        completedAt: new Date(),
-      })
-      .where(eq(jobs.id, jobId));
+      console.log(
+        `[ingest] Completed: ${totalFiles} files, ${primaryLanguage}, ${(totalSize / 1024).toFixed(0)}KB`
+      );
 
-    console.log(
-      `[ingest] Completed: ${totalFiles} files, ${primaryLanguage}, ${(totalSize / 1024).toFixed(0)}KB`
-    );
+      // Chain: enqueue indexing job
+      const [indexJob] = await db
+        .insert(jobs)
+        .values({
+          repoId,
+          type: "INDEX",
+          status: JobStatus.PENDING,
+        })
+        .returning();
 
-    // Chain: enqueue indexing job
-    const [indexJob] = await db
-      .insert(jobs)
-      .values({
+      await enqueueIndexJob({
         repoId,
-        type: "INDEX",
-        status: JobStatus.PENDING,
-      })
-      .returning();
+        jobId: indexJob.id,
+        userId,
+      });
 
-    await enqueueIndexJob({
-      repoId,
-      jobId: indexJob.id,
-      userId,
-    });
+      console.log(`[ingest] Chained index job ${indexJob.id}`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[ingest] Failed: ${errorMsg}`);
 
-    console.log(`[ingest] Chained index job ${indexJob.id}`);
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error(`[ingest] Failed: ${errorMsg}`);
+      await db
+        .update(jobs)
+        .set({
+          status: JobStatus.FAILED,
+          errorMessage: errorMsg,
+          completedAt: new Date(),
+        })
+        .where(eq(jobs.id, jobId));
 
-    await db
-      .update(jobs)
-      .set({
-        status: JobStatus.FAILED,
-        errorMessage: errorMsg,
-        completedAt: new Date(),
-      })
-      .where(eq(jobs.id, jobId));
+      await db
+        .update(repositories)
+        .set({
+          status: RepoStatus.FAILED,
+          errorMessage: errorMsg,
+          updatedAt: new Date(),
+        })
+        .where(eq(repositories.id, repoId));
 
-    await db
-      .update(repositories)
-      .set({
-        status: RepoStatus.FAILED,
-        errorMessage: errorMsg,
-        updatedAt: new Date(),
-      })
-      .where(eq(repositories.id, repoId));
-
-    throw error;
-  }
+      throw error;
+    }
+  });
 }

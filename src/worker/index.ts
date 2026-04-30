@@ -5,12 +5,15 @@
  * Run separately: `npx tsx src/worker/index.ts`
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config(); // Fallback to .env
 import { Worker } from "bullmq";
 import { getRedisConnection } from "@/lib/queue";
 import { processIngestJob } from "./processors/ingest";
 import { processIndexJob } from "./processors/index";
 import { processDocsJob } from "./processors/docs";
+import { processCodeAnalysisJob } from "./processors/codeAnalysis";
 
 const connection = getRedisConnection();
 
@@ -58,7 +61,21 @@ docsWorker.on("failed", (job, err) => {
   console.error(`❌ [docs] Job ${job?.id} failed: ${err.message}`);
 });
 
-console.log("👷 Workers ready: ingest(2), index(1), docs(2)");
+// Code Analysis Worker
+const codeAnalysisWorker = new Worker("code-analysis", processCodeAnalysisJob, {
+  connection,
+  concurrency: 2,
+});
+
+codeAnalysisWorker.on("completed", (job) => {
+  console.log(`✅ [code-analysis] Job ${job.id} completed`);
+});
+
+codeAnalysisWorker.on("failed", (job, err) => {
+  console.error(`❌ [code-analysis] Job ${job?.id} failed: ${err.message}`);
+});
+
+console.log("👷 Workers ready: ingest(2), index(1), docs(2), code-analysis(2)");
 
 // Graceful shutdown
 async function shutdown() {
@@ -67,6 +84,7 @@ async function shutdown() {
     ingestWorker.close(),
     indexWorker.close(),
     docsWorker.close(),
+    codeAnalysisWorker.close(),
   ]);
   process.exit(0);
 }

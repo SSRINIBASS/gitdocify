@@ -12,6 +12,7 @@ import { authenticateRequest } from "@/lib/auth";
 import { parseGithubUrl } from "@/lib/git";
 import { enqueueIngestJob } from "@/lib/queue";
 import { eq, and, desc } from "drizzle-orm";
+import { validateGithubUrl } from "@/lib/inputValidation";
 
 export async function POST(request: Request) {
   try {
@@ -20,11 +21,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { repoUrl, force } = await request.json();
+    const { repoUrl, force, teamId } = await request.json();
 
     if (!repoUrl) {
       return NextResponse.json(
         { error: "Repository URL is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate GitHub URL
+    if (!validateGithubUrl(repoUrl)) {
+      return NextResponse.json(
+        { error: "Invalid GitHub URL format" },
         { status: 400 }
       );
     }
@@ -91,6 +100,7 @@ export async function POST(request: Request) {
         .insert(repositories)
         .values({
           userId: auth.userId,
+          teamId: teamId || null,
           repoUrl: repoInfo.url,
           name: repoInfo.name,
           owner: repoInfo.owner,

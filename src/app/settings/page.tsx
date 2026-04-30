@@ -87,16 +87,16 @@ export default function SettingsPage() {
       <main className="page-container" style={{ maxWidth: "640px" }}>
         <div className="page-header">
           <h1 className="page-title">Settings</h1>
-          <p className="page-subtitle">Configure your Gemini API key for AI-powered features.</p>
+          <p className="page-subtitle">Configure your NVIDIA NIM API key for AI-powered features.</p>
         </div>
 
         <div className="glass-card" style={{ padding: "32px" }}>
           <h2 style={{ fontSize: "18px", fontWeight: 600, marginBottom: "8px" }}>
-            Google Gemini API Key
+            NVIDIA NIM API Key
           </h2>
           <p style={{ fontSize: "14px", color: "var(--text-secondary)", marginBottom: "24px" }}>
             Your API key is encrypted with AES-256-GCM before storage. It&apos;s used to generate
-            embeddings and AI completions using your own Google Cloud billing.
+            embeddings and AI completions using NVIDIA's platform.
           </p>
 
           {configured && (
@@ -129,7 +129,7 @@ export default function SettingsPage() {
             <input
               className="input-field"
               type="password"
-              placeholder="AIza..."
+              placeholder="nvapi-..."
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               style={{ marginBottom: "16px" }}
@@ -159,8 +159,8 @@ export default function SettingsPage() {
               🔐 <strong>Security:</strong> Your key is encrypted with AES-256-GCM using a server-side secret.
               Neither Gitdocify nor its operators can see your plaintext key.<br />
               💡 <strong>Get a key:</strong>{" "}
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style={{ color: "var(--text-accent)" }}>
-                Google AI Studio → Create API Key
+              <a href="https://build.nvidia.com" target="_blank" rel="noopener" style={{ color: "var(--text-accent)" }}>
+                NVIDIA NIM → Create API Key
               </a>
             </p>
           </div>

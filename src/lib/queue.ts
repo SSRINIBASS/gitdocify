@@ -24,6 +24,7 @@ export function getRedisConnection(): IORedis {
 let ingestQueue: Queue | null = null;
 let indexQueue: Queue | null = null;
 let docsQueue: Queue | null = null;
+let codeAnalysisQueue: Queue | null = null;
 
 export function getIngestQueue(): Queue {
   if (!ingestQueue) {
@@ -46,6 +47,13 @@ export function getDocsQueue(): Queue {
   return docsQueue;
 }
 
+export function getCodeAnalysisQueue(): Queue {
+  if (!codeAnalysisQueue) {
+    codeAnalysisQueue = new Queue("code-analysis", { connection: getRedisConnection() });
+  }
+  return codeAnalysisQueue;
+}
+
 /* ─────────────── Job Enqueueing ─────────────── */
 
 export interface IngestJobData {
@@ -62,6 +70,12 @@ export interface IndexJobData {
 }
 
 export interface DocsJobData {
+  repoId: string;
+  jobId: string;
+  userId: string;
+}
+
+export interface CodeAnalysisJobData {
   repoId: string;
   jobId: string;
   userId: string;
@@ -90,8 +104,18 @@ export async function enqueueIndexJob(data: IndexJobData) {
 export async function enqueueDocsJob(data: DocsJobData) {
   const queue = getDocsQueue();
   return queue.add("docs", data, {
-    attempts: 2,
-    backoff: { type: "exponential", delay: 5000 },
+    attempts: 5,
+    backoff: { type: "exponential", delay: 30000 },
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  });
+}
+
+export async function enqueueCodeAnalysisJob(data: CodeAnalysisJobData) {
+  const queue = getCodeAnalysisQueue();
+  return queue.add("code-analysis", data, {
+    attempts: 5,
+    backoff: { type: "exponential", delay: 30000 },
     removeOnComplete: 100,
     removeOnFail: 50,
   });

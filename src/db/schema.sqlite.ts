@@ -1,10 +1,10 @@
 /**
  * Gitdocify — SQLite Database Schema (Fallback)
- * 
+ *
  * Uses sqliteTable instead of pgTable. UUIDs are stored as text.
  */
 
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
@@ -15,14 +15,61 @@ export const users = sqliteTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   encryptedGeminiKey: text("encrypted_gemini_key"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
+
+/* ─────────────────────── Organizations ──────────────────────── */
+
+export const organizations = sqliteTable("organizations", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("idx_organizations_name").on(table.name),
+]);
+
+/* ─────────────────────────── Teams ─────────────────────────── */
+
+export const teams = sqliteTable("teams", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  name: text("name").notNull(),
+  description: text("description"),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organizations.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("idx_teams_org_id").on(table.organizationId),
+  uniqueIndex("idx_teams_name").on(table.name),
+]);
+
+/* ─────────────────────── Team Memberships ──────────────────────── */
+
+export const teamMemberships = sqliteTable("team_memberships", {
+  id: text("id").primaryKey().$defaultFn(() => uuidv4()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  teamId: text("team_id")
+    .notNull()
+    .references(() => teams.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"), // 'owner', 'admin', 'member'
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("idx_team_memberships_user_id").on(table.userId),
+  uniqueIndex("idx_team_memberships_team_id").on(table.teamId),
+  uniqueIndex("idx_team_memberships_user_team").on(table.userId, table.teamId),
+]);
 
 /* ─────────────────────── Repositories ──────────────────────── */
 
 export const repositories = sqliteTable("repositories", {
   id: text("id").primaryKey().$defaultFn(() => uuidv4()),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  teamId: text("team_id").references(() => teams.id, { onDelete: "cascade" }),
   repoUrl: text("repo_url").notNull(),
   name: text("name").notNull(),
   owner: text("owner").notNull(),
@@ -35,9 +82,12 @@ export const repositories = sqliteTable("repositories", {
   errorMessage: text("error_message"),
   readmeContent: text("readme_content"),
   architectureContent: text("architecture_content"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-});
+  codeAnalysisJson: text("code_analysis_json"),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+}, (table) => [
+  uniqueIndex("idx_repos_user_url").on(table.userId, table.repoUrl),
+]);
 
 /* ─────────────────────── Code Chunks ──────────────────────── */
 
@@ -52,7 +102,7 @@ export const codeChunks = sqliteTable("code_chunks", {
   language: text("language"),
   content: text("content").notNull(),
   tokenCount: integer("token_count"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
 /* ───────────────────────── Jobs ────────────────────────────── */
@@ -66,7 +116,7 @@ export const jobs = sqliteTable("jobs", {
   errorMessage: text("error_message"),
   startedAt: integer("started_at", { mode: "timestamp" }),
   completedAt: integer("completed_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
 /* ──────────────────── Tutor Sessions ──────────────────────── */
@@ -77,8 +127,8 @@ export const tutorSessions = sqliteTable("tutor_sessions", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   contextSummary: text("context_summary"),
   rollingSummary: text("rolling_summary"),
-  lastActivityAt: integer("last_activity_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  lastActivityAt: integer("last_activity_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
 /* ──────────────────── Tutor Messages ──────────────────────── */
@@ -89,7 +139,7 @@ export const tutorMessages = sqliteTable("tutor_messages", {
   role: text("role").notNull(),
   content: text("content").notNull(),
   referencesJson: text("references_json"),
-  createdAt: integer("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
 });
 
 /* ─────────────────── Status Enums ─────────────────────────── */
