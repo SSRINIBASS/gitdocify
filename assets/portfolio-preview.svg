@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-labelledby="t d">
+<title id="t">GitDocify — repository intelligence</title><desc id="d">A visual pipeline showing a GitHub repository flowing through asynchronous indexing into a semantic code search system.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0B1328"/><stop offset="1" stop-color="#221A43"/></linearGradient><linearGradient id="a"><stop stop-color="#60A5FA"/><stop offset="1" stop-color="#A78BFA"/></linearGradient></defs>
+<rect width="760" height="330" rx="24" fill="url(#bg)"/><circle cx="660" cy="34" r="160" fill="#6D5CE7" opacity=".08"/>
+<g opacity=".12" stroke="#A5B4FC"><path d="M0 72H760M0 144H760M0 216H760M0 288H760"/><path d="M80 0V330M160 0V330M240 0V330M320 0V330M400 0V330M480 0V330M560 0V330M640 0V330"/></g>
+<rect x="34" y="28" width="174" height="26" rx="13" fill="#263B70"/><text x="48" y="46" font-family="Inter,Segoe UI,Arial" font-size="11" letter-spacing="1.5" fill="#BFDBFE">01 / DEVELOPER TOOLING</text>
+<text x="34" y="112" fill="#F8FAFC" font-family="Inter,Segoe UI,Arial" font-size="39" font-weight="700">GitDocify</text>
+<text x="35" y="145" fill="#C4B5FD" font-family="Inter,Segoe UI,Arial" font-size="16">Repository intelligence</text>
+<text x="35" y="174" fill="#AAB6D3" font-family="Inter,Segoe UI,Arial" font-size="13">Ingest. Index. Retrieve. Understand.</text>
+<g font-family="Inter,Segoe UI,Arial" font-size="11" fill="#DCE7F8">
+<rect x="34" y="210" width="91" height="28" rx="14" fill="#1D3154" stroke="#365B8F"/><text x="79" y="228" text-anchor="middle">Next.js</text>
+<rect x="133" y="210" width="105" height="28" rx="14" fill="#1D3154" stroke="#365B8F"/><text x="185" y="228" text-anchor="middle">PostgreSQL</text>
+<rect x="34" y="246" width="76" height="28" rx="14" fill="#34275E" stroke="#6551A7"/><text x="72" y="264" text-anchor="middle">pgvector</text>
+<rect x="118" y="246" width="82" height="28" rx="14" fill="#34275E" stroke="#6551A7"/><text x="159" y="264" text-anchor="middle">BullMQ</text>
+<rect x="208" y="246" width="70" height="28" rx="14" fill="#34275E" stroke="#6551A7"/><text x="243" y="264" text-anchor="middle">Redis</text>
+</g>
+<g stroke="url(#a)" stroke-width="2" fill="none" opacity=".85"><path d="M390 114H446M500 114H556M610 114H664"/><path d="M473 150V207H583V150"/></g>
+<g font-family="Inter,Segoe UI,Arial" text-anchor="middle">
+<rect x="344" y="80" width="96" height="68" rx="13" fill="#142844" stroke="#4B86C8"/><text x="392" y="108" fill="#BFDBFE" font-size="12">GitHub</text><text x="392" y="126" fill="#E2E8F0" font-size="10">Repository</text>
+<rect x="448" y="80" width="104" height="68" rx="13" fill="#20234A" stroke="#7768D4"/><text x="500" y="108" fill="#DDD6FE" font-size="12">Queue</text><text x="500" y="126" fill="#C4B5FD" font-size="10">BullMQ / Redis</text>
+<rect x="558" y="80" width="96" height="68" rx="13" fill="#20234A" stroke="#7768D4"/><text x="606" y="108" fill="#DDD6FE" font-size="12">Index</text><text x="606" y="126" fill="#C4B5FD" font-size="10">Embeddings</text>
+<rect x="660" y="80" width="78" height="68" rx="13" fill="#123A42" stroke="#2DD4BF"/><text x="699" y="108" fill="#99F6E4" font-size="12">Search</text><text x="699" y="126" fill="#CCFBF1" font-size="10">RAG</text>
+<rect x="452" y="208" width="188" height="61" rx="13" fill="#111D34" stroke="#425A7F"/><text x="546" y="233" fill="#E2E8F0" font-size="12">Semantic retrieval</text><text x="546" y="251" fill="#94A3B8" font-size="10">Source-grounded answers</text>
+</g>
+<text x="34" y="306" fill="#7183A7" font-family="Inter,Segoe UI,Arial" font-size="10" letter-spacing="1.3">LOCAL EMBEDDINGS  •  ASYNC INDEXING  •  CODE SEARCH</text>
+</svg>
