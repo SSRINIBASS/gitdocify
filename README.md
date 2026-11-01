@@ -1,12 +1,23 @@
 # GitDocify
 
+<p>
+  <img src="https://img.shields.io/badge/Status-Active%20Development-7C3AED?style=for-the-badge"/>
+  <img src="https://img.shields.io/github/actions/workflow/status/SSRINIBASS/gitdocify/ci.yml?branch=main&style=for-the-badge&label=CI"/>
+  <img src="https://img.shields.io/badge/Tests-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white"/>
+  <img src="https://img.shields.io/badge/License-MIT-0F766E?style=for-the-badge"/>
+</p>
+
+<p>
+  <a href="https://skillicons.dev"><img src="https://skillicons.dev/icons?i=nextjs,ts,postgres,redis,docker,vitest,githubactions&perline=7" alt="GitDocify technology stack"/></a>
+</p>
+
 **Repository intelligence for developers.** GitDocify ingests a GitHub codebase, builds a searchable representation of its source, and lets developers ask questions grounded in retrieved code.
 
-## Why it exists
+## 💡 Why it exists
 
 Understanding an unfamiliar repository often means tracing files, symbols, dependencies, and control flow manually. GitDocify turns that exploration into an indexed workflow: provide a repository, let background jobs process it, then search and ask questions against the resulting code context.
 
-## Core workflow
+## 🏗️ Core workflow
 
 ```mermaid
 flowchart TD
@@ -21,7 +32,7 @@ flowchart TD
     Q -. workers .-> C
 ```
 
-## Engineering highlights
+## ⚡ Engineering highlights
 
 - **Asynchronous processing:** BullMQ and Redis coordinate ingestion, indexing, documentation, and code-analysis jobs in separate workers.
 - **Local-first embeddings:** Transformers.js with `Xenova/all-MiniLM-L6-v2` generates 384-dimensional embeddings locally, avoiding a hosted embedding API.
@@ -30,7 +41,7 @@ flowchart TD
 - **Application security:** JWT-based authentication and encrypted storage for user-provided model credentials.
 - **Automated tests:** Vitest covers authentication, cryptography, validation, queues, repository APIs, and vector-search utilities.
 
-## Stack
+## 🧰 Stack
 
 | Layer | Technology |
 |---|---|
@@ -43,7 +54,7 @@ flowchart TD
 | Generation | NVIDIA NIM-compatible API |
 | Testing | Vitest |
 
-## Run locally
+## 🚀 Run locally
 
 ### Requirements
 
@@ -85,7 +96,7 @@ npm run worker
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Quality checks
+## 🧪 Quality checks
 
 ```bash
 npm run lint
@@ -95,10 +106,10 @@ npm run build
 
 Vitest is configured for the repository's `*.test.ts` and `*.test.tsx` files. The test suite uses test-only environment values and does not require real model credentials.
 
-## Configuration
+## 🔐 Configuration
 
 The committed `.env.example` contains placeholder values only. Use local secrets in `.env.local`, and never commit API keys, database files, logs, repository clones, or generated artifacts.
 
-## License
+## 📄 License
 
 MIT — see [LICENSE](LICENSE).
