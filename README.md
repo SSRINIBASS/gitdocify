@@ -112,6 +112,8 @@ npm run build
 
 Vitest is configured for the repository's `*.test.ts` and `*.test.tsx` files. The test suite uses test-only environment values and does not require real model credentials.
 
+> **CI scope:** the GitHub Actions badge tracks the Vitest suite only. The current `npm run lint` command still reports existing ESLint cleanup issues (including explicit `any` types and unused imports); lint is not represented as passing by the test badge.
+
 ## 🔐 Configuration
 
 The committed `.env.example` contains placeholder values only. Use local secrets in `.env.local`, and never commit API keys, database files, logs, repository clones, or generated artifacts.
