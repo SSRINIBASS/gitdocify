@@ -1,113 +1,104 @@
-# Gitdocify
+# GitDocify
 
-Gitdocify is an AI-powered code intelligence platform that automatically generates documentation for code repositories using advanced AI analysis. It empowers developers and teams to instantly understand, search, and converse with codebases of any size.
+**Repository intelligence for developers.** GitDocify ingests a GitHub codebase, builds a searchable representation of its source, and lets developers ask questions grounded in retrieved code.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Next.js](https://img.shields.io/badge/Next.js-16.2-black?logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)
+## Why it exists
 
-## ✨ Features
+Understanding an unfamiliar repository often means tracing files, symbols, dependencies, and control flow manually. GitDocify turns that exploration into an indexed workflow: provide a repository, let background jobs process it, then search and ask questions against the resulting code context.
 
-- **Automated Repository Ingestion**: Paste a GitHub URL and Gitdocify will clone, chunk, and index the codebase automatically.
-- **100% Free, Local-First Architecture**: 
-  - **Local Embeddings**: Generates `384-dimensional` vector embeddings entirely locally on your CPU using Transformers.js (`Xenova/all-MiniLM-L6-v2`).
-  - **Free Generative AI**: Uses NVIDIA NIM's generous free-tier API (`meta/llama-3.1-8b-instruct`) instead of restrictive, paid AI platforms.
-- **Semantic Vector Search**: Powered by `pgvector` (PostgreSQL) for deep semantic searches across your code chunks, with an automatic, mathematically-equivalent SQLite fallback for local development.
-- **AI Tutor Interface**: An interactive chat interface that understands your repository's context and can explain complex functions, architectures, and dependencies.
-- **Team Collaboration**: Create organizations, manage teams, and securely share repository intelligence across your workspace with role-based access control (RBAC).
-- **Background Pipeline Orchestration**: Highly scalable background processing powered by `BullMQ` and `Redis`, complete with exponential backoffs and resilient error handling.
+## Core workflow
 
----
-
-## 🏗️ Architecture
-
-Gitdocify is built using a modern, robust full-stack architecture:
-
-- **Frontend**: Next.js 16 (App Router), React 19, Tailwind CSS
-- **Backend APIs**: Next.js API Routes
-- **Database**: Drizzle ORM supporting both **PostgreSQL** (w/ pgvector) and **SQLite**
-- **Authentication**: JWT-based auth with AES-256-GCM BYOK (Bring Your Own Key) encryption for NVIDIA API keys
-- **Queue System**: BullMQ + Redis for asynchronous repository processing
-- **AI Integration**: Custom `fetch`-based REST client designed for OpenAI-compatible endpoints (configured for NVIDIA NIM).
-- **Local Vectors**: `@xenova/transformers` running natively in Node.js.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v18+)
-- Redis (running locally or via Docker on port `6379`)
-- NVIDIA NIM API Key (Free at [build.nvidia.com](https://build.nvidia.com))
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/SSRINIBASS/gitdocify.git
-   cd gitdocify
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Environment Setup**
-   Create a `.env.local` file in the root directory:
-   ```env
-   # Database Configuration (Use postgres or sqlite)
-   DB_TYPE=sqlite
-   DATABASE_URL=file:./dev.db
-   
-   # Redis Configuration for Job Queues
-   REDIS_URL=redis://localhost:6379
-   
-   # Security Secrets
-   JWT_SECRET=your_super_secret_jwt_key_here
-   ENCRYPTION_SECRET=your_super_secret_32_char_encryption_key
-   ```
-
-4. **Initialize the Database**
-   ```bash
-   npm run db:push
-   ```
-
-5. **Start the Development Environment**
-   You will need two terminal windows.
-   
-   **Terminal 1:** Start the Next.js web application
-   ```bash
-   npm run dev
-   ```
-
-   **Terminal 2:** Start the background worker processes
-   ```bash
-   npm run worker
-   ```
-
-6. Open [http://localhost:3000](http://localhost:3000) in your browser.
-7. Go to **Settings** and input your **NVIDIA API Key**.
-
----
-
-## 🧪 Testing
-
-Gitdocify includes a comprehensive testing suite utilizing `Vitest`.
-
-To run unit and integration tests:
-```bash
-npm run test
+```mermaid
+flowchart TD
+    A[GitHub repository URL] --> B[Repository ingestion]
+    B --> C[Clone and inspect source]
+    C --> D[Chunk and analyse files]
+    D --> E[Local embedding generation]
+    E --> F[(PostgreSQL + pgvector)]
+    F --> G[Semantic retrieval]
+    G --> H[Context-grounded response]
+    B -. async job .-> Q[BullMQ + Redis]
+    Q -. workers .-> C
 ```
 
-To run tests in watch mode during development:
+## Engineering highlights
+
+- **Asynchronous processing:** BullMQ and Redis coordinate ingestion, indexing, documentation, and code-analysis jobs in separate workers.
+- **Local-first embeddings:** Transformers.js with `Xenova/all-MiniLM-L6-v2` generates 384-dimensional embeddings locally, avoiding a hosted embedding API.
+- **Semantic retrieval:** PostgreSQL with pgvector supports vector similarity search; SQLite provides a lightweight local-development fallback.
+- **Grounded code assistance:** Retrieved source context and code references are used to support answers about a repository.
+- **Application security:** JWT-based authentication and encrypted storage for user-provided model credentials.
+- **Automated tests:** Vitest covers authentication, cryptography, validation, queues, repository APIs, and vector-search utilities.
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Application | Next.js, React, TypeScript |
+| API | Next.js Route Handlers |
+| Persistence | Drizzle ORM, PostgreSQL, SQLite |
+| Vector search | pgvector |
+| Background jobs | BullMQ, Redis |
+| Embeddings | Transformers.js |
+| Generation | NVIDIA NIM-compatible API |
+| Testing | Vitest |
+
+## Run locally
+
+### Requirements
+
+- Node.js 20.9+
+- npm
+- Redis (Docker Compose is provided)
+- PostgreSQL with pgvector if you want to run in PostgreSQL mode; SQLite can be used for local development
+- A supported model API key for generation
+
+### Setup
+
 ```bash
-npm run test:watch
+git clone https://github.com/SSRINIBASS/gitdocify.git
+cd gitdocify
+npm ci
+cp .env.example .env.local
 ```
 
----
+Set `JWT_SECRET`, `ENCRYPTION_SECRET`, and the appropriate database and Redis values in `.env.local`. Never commit this file.
 
-## 📝 License
+Start the supporting services:
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+```bash
+docker compose up -d
+```
+
+Initialise the selected database and start the web app:
+
+```bash
+npm run db:push
+npm run dev
+```
+
+In a second terminal, start the background workers:
+
+```bash
+npm run worker
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Quality checks
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Vitest is configured for the repository's `*.test.ts` and `*.test.tsx` files. The test suite uses test-only environment values and does not require real model credentials.
+
+## Configuration
+
+The committed `.env.example` contains placeholder values only. Use local secrets in `.env.local`, and never commit API keys, database files, logs, repository clones, or generated artifacts.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
