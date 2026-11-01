@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/portfolio-preview.svg" width="100%" alt="GitDocify repository intelligence architecture"/>
+
+</div>
+
 # GitDocify
 
 <p>
