@@ -2,7 +2,7 @@
 
 <p>
   <img src="https://img.shields.io/badge/Status-Active%20Development-7C3AED?style=for-the-badge"/>
-  <img src="https://img.shields.io/github/actions/workflow/status/SSRINIBASS/gitdocify/ci.yml?branch=main&style=for-the-badge&label=CI"/>
+  <a href="https://github.com/SSRINIBASS/gitdocify/actions/workflows/ci.yml"><img src="https://img.shields.io/badge/GitHub%20Actions-Lint%20%26%20Test-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Actions workflow"/></a>
   <img src="https://img.shields.io/badge/Tests-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white"/>
   <img src="https://img.shields.io/badge/License-MIT-0F766E?style=for-the-badge"/>
 </p>
